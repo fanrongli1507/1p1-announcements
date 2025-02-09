@@ -1,43 +1,44 @@
 const express = require("express");
-const fs = require("fs");
 const cors = require("cors");
+const { MongoClient } = require("mongodb");
+
+// MongoDB connection URL and database name
+const MONGO_URL = "mongodb+srv://fanrongli1507:ryu19UWlJkgt14rV@cluster0.a4fcq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"; // Replace with your MongoDB connection string
+const DB_NAME = "announcementsDb";
+const COLLECTION_NAME = "announcements";
 
 const app = express();
-const PORT = 3000;
-const DATA_FILE = "./announcements.json";
+const PORT = 5501;
 
 // Middleware
 app.use(cors()); // Allow frontend requests
 app.use(express.json()); // Parse JSON request bodies
 
-// Function to read data from JSON file
-const readAnnouncements = () => {
-  try {
-    const data = fs.readFileSync(DATA_FILE, "utf8");
-    return JSON.parse(data);
-  } catch (error) {
-    console.error("Error reading file:", error);
-    return [];
-  }
-};
-
-// Function to write data to JSON file
-const writeAnnouncements = (data) => {
-  try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), "utf8");
-  } catch (error) {
-    console.error("Error writing file:", error);
-  }
-};
+// Connect to MongoDB
+let db;
+MongoClient.connect(MONGO_URL, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then((client) => {
+    db = client.db(DB_NAME);
+    console.log("Connected to MongoDB");
+  })
+  .catch((error) => {
+    console.error("Error connecting to MongoDB", error);
+    process.exit(1); // Exit if MongoDB connection fails
+  });
 
 // Get all announcements
-app.get("/announcements", (req, res) => {
-  const announcements = readAnnouncements();
-  res.json(announcements);
+app.get("/announcements", async (req, res) => {
+  try {
+    const announcements = await db.collection(COLLECTION_NAME).find().toArray();
+    res.json(announcements);
+  } catch (error) {
+    console.error("Error fetching announcements:", error);
+    res.status(500).send("Error fetching announcements");
+  }
 });
 
 // Add a new announcement
-app.post("/announcements", (req, res) => {
+app.post("/announcements", async (req, res) => {
   const { name, content, deadline } = req.body;
 
   if (!name || !content || !deadline) {
@@ -47,15 +48,17 @@ app.post("/announcements", (req, res) => {
   const newAnnouncement = {
     name,
     content,
-    "date-created": new Date().toISOString(),
-    deadline: new Date(deadline).toISOString(),
+    "date-created": new Date(),
+    deadline: new Date(deadline),
   };
 
-  const announcements = readAnnouncements();
-  announcements.push(newAnnouncement);
-  writeAnnouncements(announcements);
-
-  res.status(201).json({ message: "Announcement added", newAnnouncement });
+  try {
+    const result = await db.collection(COLLECTION_NAME).insertOne(newAnnouncement);
+    res.status(201).json({ message: "Announcement added", newAnnouncement });
+  } catch (error) {
+    console.error("Error adding announcement:", error);
+    res.status(500).send("Error adding announcement");
+  }
 });
 
 // Start server
