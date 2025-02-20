@@ -23,6 +23,19 @@ MongoClient.connect(MONGO_URL, { useNewUrlParser: true, useUnifiedTopology: true
     console.error("Error connecting to MongoDB", error);
     process.exit(1);
   });
+  async function replaceCollection(newData) {
+    try {
+        const collection = db.collection(COLLECTION_NAME);
+
+        await collection.deleteMany({});
+
+        await collection.insertMany(newData);
+
+        console.log("Collection replaced successfully!");
+    } catch (error) {
+        console.error("Error replacing collection:", error);
+    }
+}
 
 async function deleteExpiredAnnouncements() {
   try {
@@ -76,6 +89,21 @@ app.post("/announcements", async (req, res) => {
   } catch (error) {
     console.error("Error adding announcement:", error);
     res.status(500).send("Error adding announcement");
+  }
+});
+
+app.post("/delete-announcements", async (req, res) => {
+  const { content } = req.body;
+  if (!content) {
+    return res.status(400).json({ error: "Content is required" });
+  }
+
+  try {
+    await replaceCollection(content);
+    res.status(200).json({ message: "Announcements replaced successfully" });
+  } catch (error) {
+    console.error("Error replacing announcements:", error);
+    res.status(500).json({ error: "Error replacing announcements" });
   }
 });
 
