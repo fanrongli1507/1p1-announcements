@@ -41,7 +41,7 @@ async function deleteExpiredAnnouncements() {
   }
 }
 
-cron.schedule("17 * * * *", () => {
+cron.schedule("0 * * * *", () => {
   console.log("Running cron job to clean up expired announcements...");
   deleteExpiredAnnouncements();
 });
