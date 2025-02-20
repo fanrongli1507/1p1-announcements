@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const cron = require("node-cron");
 const { MongoClient } = require("mongodb");
 
 const MONGO_URL = "mongodb+srv://fanrongli1507:ryu19UWlJkgt14rV@cluster0.a4fcq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
@@ -40,7 +41,7 @@ async function deleteExpiredAnnouncements() {
   }
 }
 
-cron.schedule("0 * * * *", () => {
+cron.schedule("17 * * * *", () => {
   console.log("Running cron job to clean up expired announcements...");
   deleteExpiredAnnouncements();
 });
