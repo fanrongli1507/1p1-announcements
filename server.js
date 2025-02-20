@@ -2,19 +2,16 @@ const express = require("express");
 const cors = require("cors");
 const { MongoClient } = require("mongodb");
 
-// MongoDB connection URL and database name
-const MONGO_URL = "mongodb+srv://fanrongli1507:ryu19UWlJkgt14rV@cluster0.a4fcq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"; // Replace with your MongoDB connection string
+const MONGO_URL = "mongodb+srv://fanrongli1507:ryu19UWlJkgt14rV@cluster0.a4fcq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 const DB_NAME = "announcementsDb";
 const COLLECTION_NAME = "announcements";
 
 const app = express();
-const PORT = 5501;
+const PORT = 3000;
 
-// Middleware
-app.use(cors()); // Allow frontend requests
-app.use(express.json()); // Parse JSON request bodies
+app.use(cors());
+app.use(express.json());
 
-// Connect to MongoDB
 let db;
 MongoClient.connect(MONGO_URL, { useNewUrlParser: true, useUnifiedTopology: true })
   .then((client) => {
@@ -23,10 +20,31 @@ MongoClient.connect(MONGO_URL, { useNewUrlParser: true, useUnifiedTopology: true
   })
   .catch((error) => {
     console.error("Error connecting to MongoDB", error);
-    process.exit(1); // Exit if MongoDB connection fails
+    process.exit(1);
   });
 
-// Get all announcements
+async function deleteExpiredAnnouncements() {
+  try {
+    const client = await MongoClient.connect(MONGO_URL, { useUnifiedTopology: true });
+    const db = client.db(DB_NAME);
+    const collection = db.collection(COLLECTION_NAME);
+
+    const result = await collection.deleteMany({
+      deadline: { $lt: new Date() },
+    });
+
+    console.log(`Deleted ${result.deletedCount} expired announcements.`);
+    client.close();
+  } catch (error) {
+    console.error("Error deleting expired announcements:", error);
+  }
+}
+
+cron.schedule("0 * * * *", () => {
+  console.log("Running cron job to clean up expired announcements...");
+  deleteExpiredAnnouncements();
+});
+
 app.get("/announcements", async (req, res) => {
   try {
     const announcements = await db.collection(COLLECTION_NAME).find().toArray();
@@ -37,7 +55,6 @@ app.get("/announcements", async (req, res) => {
   }
 });
 
-// Add a new announcement
 app.post("/announcements", async (req, res) => {
   const { name, content, deadline } = req.body;
 
