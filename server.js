@@ -111,3 +111,5 @@ app.post("/delete-announcements", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
+
+setInterval(() => console.log('server is alive') , 60000);
