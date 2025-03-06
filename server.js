@@ -1,6 +1,5 @@
 const express = require("express");
 const cors = require("cors");
-const cron = require("node-cron");
 const { MongoClient } = require("mongodb");
 
 const MONGO_URL = "mongodb+srv://fanrongli1507:ryu19UWlJkgt14rV@cluster0.a4fcq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
@@ -54,13 +53,10 @@ async function deleteExpiredAnnouncements() {
   }
 }
 
-cron.schedule("0 * * * *", () => {
-  console.log("Running cron job to clean up expired announcements...");
-  deleteExpiredAnnouncements();
-});
 
 app.get("/announcements", async (req, res) => {
   try {
+    deleteExpiredAnnouncements();
     const announcements = await db.collection(COLLECTION_NAME).find().toArray();
     res.json(announcements);
   } catch (error) {
@@ -112,4 +108,3 @@ app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
 
-setInterval(() => console.log('server is alive') , 60000);
