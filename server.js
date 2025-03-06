@@ -1,7 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 const { MongoClient } = require("mongodb");
-const fetch = require("node-fetch"); // Required for self-pinging
+const fetch = require("node-fetch");
+import("node-fetch");
 
 const MONGO_URL = "mongodb+srv://fanrongli1507:ryu19UWlJkgt14rV@cluster0.a4fcq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 const DB_NAME = "announcementsDb";
