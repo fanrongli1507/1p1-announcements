@@ -1,9 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const { MongoClient } = require("mongodb");
-const fetch = require("node-fetch");
-import("node-fetch");
-
+const https = require("https")
 const MONGO_URL = "mongodb+srv://fanrongli1507:ryu19UWlJkgt14rV@cluster0.a4fcq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 const DB_NAME = "announcementsDb";
 const COLLECTION_NAME = "announcements";
@@ -50,7 +48,6 @@ async function deleteExpiredAnnouncements() {
   }
 }
 
-// ✅ DELETE EXPIRED ANNOUNCEMENTS WHENEVER `GET /announcements` IS CALLED
 app.get("/announcements", async (req, res) => {
   try {
     await deleteExpiredAnnouncements();
@@ -99,25 +96,25 @@ app.post("/delete-announcements", async (req, res) => {
   }
 });
 
-// ✅ FIXED: Self-ping to keep Render server alive
 function keepServerAlive() {
-  const serverUrl = "https://onep1-announcements.onrender.com"; // FIXED URL
-  setInterval(async () => {
-    try {
-      const response = await fetch(serverUrl);
-      if (response.ok) {
-        console.log("Self-ping successful! Server is active.");
-      } else {
-        console.error("Self-ping failed:", response.statusText);
-      }
-    } catch (error) {
-      console.error("Error pinging server:", error);
-    }
-  }, 600000); // Runs every 10 minutes
+  const serverUrl = "https://onep1-announcements.onrender.com/announcements";
+  
+  setInterval(() => {
+    https.get(serverUrl, (res) => {
+      console.log("Self-ping successful! Status:", res.statusCode);
+    }).on("error", (error) => {
+      console.error("Error pinging server:", error.message);
+    });
+  }, 600000); 
 }
 
 // Start server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
   keepServerAlive();
+  https.get('https://onep1-announcements.onrender.com/announcements', (res) => {
+    console.log("Self-ping successful! Status:", res.statusCode);
+  }).on("error", (error) => {
+    console.error("Error pinging server:", error.message);
+  });
 });
