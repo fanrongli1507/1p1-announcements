@@ -103,8 +103,24 @@ app.post("/delete-announcements", async (req, res) => {
   }
 });
 
+function keepServerAlive() {
+  const serverUrl = "https://onep1-announcements.onrender.com/announcements"; 
+  setInterval(async () => {
+    try {
+      const response = await fetch(`${serverUrl}/announcements`);
+      if (response.ok) {
+        console.log("Self-ping successful! Server is active.");
+      } else {
+        console.error("Self-ping failed:", response.statusText);
+      }
+    } catch (error) {
+      console.error("Error pinging server:", error);
+    }
+  }, 600000);
+}
 // Start server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
+  keepServerAlive();
 });
 
