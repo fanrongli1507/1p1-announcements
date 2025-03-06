@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const { MongoClient } = require("mongodb");
+const fetch = require("node-fetch"); // Required for self-pinging
 
 const MONGO_URL = "mongodb+srv://fanrongli1507:ryu19UWlJkgt14rV@cluster0.a4fcq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 const DB_NAME = "announcementsDb";
@@ -22,41 +23,36 @@ MongoClient.connect(MONGO_URL, { useNewUrlParser: true, useUnifiedTopology: true
     console.error("Error connecting to MongoDB", error);
     process.exit(1);
   });
-  async function replaceCollection(newData) {
-    try {
-        const collection = db.collection(COLLECTION_NAME);
 
-        await collection.deleteMany({});
-
-        await collection.insertMany(newData);
-
-        console.log("Collection replaced successfully!");
-    } catch (error) {
-        console.error("Error replacing collection:", error);
-    }
+async function replaceCollection(newData) {
+  try {
+    const collection = db.collection(COLLECTION_NAME);
+    await collection.deleteMany({});
+    await collection.insertMany(newData);
+    console.log("Collection replaced successfully!");
+  } catch (error) {
+    console.error("Error replacing collection:", error);
+  }
 }
 
+// ✅ FIXED: Now using the existing `db` connection
 async function deleteExpiredAnnouncements() {
   try {
-    const client = await MongoClient.connect(MONGO_URL, { useUnifiedTopology: true });
-    const db = client.db(DB_NAME);
     const collection = db.collection(COLLECTION_NAME);
-
     const result = await collection.deleteMany({
       deadline: { $lt: new Date() },
     });
 
     console.log(`Deleted ${result.deletedCount} expired announcements.`);
-    client.close();
   } catch (error) {
     console.error("Error deleting expired announcements:", error);
   }
 }
 
-
+// ✅ DELETE EXPIRED ANNOUNCEMENTS WHENEVER `GET /announcements` IS CALLED
 app.get("/announcements", async (req, res) => {
   try {
-    deleteExpiredAnnouncements();
+    await deleteExpiredAnnouncements();
     const announcements = await db.collection(COLLECTION_NAME).find().toArray();
     res.json(announcements);
   } catch (error) {
@@ -67,7 +63,6 @@ app.get("/announcements", async (req, res) => {
 
 app.post("/announcements", async (req, res) => {
   const { name, content, deadline } = req.body;
-
   if (!name || !content || !deadline) {
     return res.status(400).json({ error: "All fields are required" });
   }
@@ -80,7 +75,7 @@ app.post("/announcements", async (req, res) => {
   };
 
   try {
-    const result = await db.collection(COLLECTION_NAME).insertOne(newAnnouncement);
+    await db.collection(COLLECTION_NAME).insertOne(newAnnouncement);
     res.status(201).json({ message: "Announcement added", newAnnouncement });
   } catch (error) {
     console.error("Error adding announcement:", error);
@@ -103,11 +98,12 @@ app.post("/delete-announcements", async (req, res) => {
   }
 });
 
+// ✅ FIXED: Self-ping to keep Render server alive
 function keepServerAlive() {
-  const serverUrl = "https://onep1-announcements.onrender.com/announcements"; 
+  const serverUrl = "https://onep1-announcements.onrender.com"; // FIXED URL
   setInterval(async () => {
     try {
-      const response = await fetch(`${serverUrl}/announcements`);
+      const response = await fetch(serverUrl);
       if (response.ok) {
         console.log("Self-ping successful! Server is active.");
       } else {
@@ -116,11 +112,11 @@ function keepServerAlive() {
     } catch (error) {
       console.error("Error pinging server:", error);
     }
-  }, 600000);
+  }, 600000); // Runs every 10 minutes
 }
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
   keepServerAlive();
 });
-
